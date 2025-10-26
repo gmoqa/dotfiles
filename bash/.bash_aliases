@@ -221,3 +221,141 @@ notify() {
 alias notify-success='notify -t "Success" --sound'
 alias notify-error='notify -t "Error" -p high --sound'
 alias notify-warn='notify -t "Warning" -p high'
+
+# ============================================
+# Termux-API: WiFi Information
+# ============================================
+
+# WiFi information and network scanner
+wifi() {
+    local action="${1:-info}"
+
+    case "$action" in
+        -h|--help|help)
+            echo "Usage: wifi [info|scan|watch]"
+            echo ""
+            echo "Commands:"
+            echo "  wifi          - Show current WiFi connection details (default)"
+            echo "  wifi info     - Show current WiFi connection details"
+            echo "  wifi scan     - Scan and list available networks"
+            echo "  wifi watch    - Monitor WiFi signal in real-time (Ctrl+C to stop)"
+            echo ""
+            echo "Examples:"
+            echo "  wifi          - Show connection info"
+            echo "  wifi scan     - Scan nearby networks"
+            echo "  wifi watch    - Monitor signal strength"
+            return 0
+            ;;
+        info)
+            echo "[WIFI CONNECTION INFO]"
+            echo "================================================================"
+
+            local wifi_data=$(termux-wifi-connectioninfo 2>/dev/null)
+
+            if [ -z "$wifi_data" ]; then
+                echo "ERROR: Unable to get WiFi information"
+                echo "Make sure Termux:API is installed and has permissions"
+                return 1
+            fi
+
+            # Parse and display info
+            echo "$wifi_data" | jq -r '
+                "SSID:           \(.ssid // "Not connected")
+BSSID:          \(.bssid // "N/A")
+IP Address:     \(.ip // "N/A")
+MAC Address:    \(.mac_address // "N/A")
+----------------------------------------------------------------
+Signal (RSSI):  \(.rssi // "N/A") dBm  \(
+    if .rssi then
+        if .rssi >= -50 then "(Excellent)"
+        elif .rssi >= -60 then "(Good)"
+        elif .rssi >= -70 then "(Fair)"
+        else "(Poor)"
+        end
+    else ""
+    end
+)
+Link Speed:     \(.link_speed_mbps // "N/A") Mbps
+Frequency:      \(.frequency_mhz // "N/A") MHz  \(
+    if .frequency_mhz then
+        if .frequency_mhz >= 5000 then "(5 GHz)"
+        else "(2.4 GHz)"
+        end
+    else ""
+    end
+)
+Network ID:     \(.network_id // "N/A")
+State:          \(.supplicant_state // "N/A")
+Hidden SSID:    \(if .ssid_hidden then "Yes" else "No" end)
+================================================================"'
+            ;;
+        scan)
+            echo "[WIFI NETWORK SCAN]"
+            echo "Scanning available networks..."
+            echo "================================================================"
+
+            termux-wifi-scaninfo 2>/dev/null | jq -r '
+                sort_by(-.rssi) |
+                .[] |
+                "SSID:      \(.ssid // "(Hidden Network)")
+BSSID:     \(.bssid)
+Signal:    \(.rssi) dBm  \(
+    if .rssi >= -50 then "(Excellent)"
+    elif .rssi >= -60 then "(Good)"
+    elif .rssi >= -70 then "(Fair)"
+    else "(Poor)"
+    end
+)
+Frequency: \(.frequency) MHz  \(
+    if .frequency >= 5000 then "(5 GHz)"
+    else "(2.4 GHz)"
+    end
+)
+----------------------------------------------------------------"'
+            echo "================================================================"
+            echo "Networks sorted by signal strength (strongest first)"
+            ;;
+        watch)
+            echo "[WIFI SIGNAL MONITOR]"
+            echo "Monitoring WiFi signal... (Press Ctrl+C to stop)"
+            echo ""
+
+            while true; do
+                local wifi_data=$(termux-wifi-connectioninfo 2>/dev/null)
+                local timestamp=$(date '+%H:%M:%S')
+
+                clear
+                echo "[WIFI SIGNAL MONITOR] - $timestamp"
+                echo "================================================================"
+
+                echo "$wifi_data" | jq -r '
+                    "SSID:        \(.ssid // "Not connected")
+Signal:      \(.rssi // "N/A") dBm  \(
+    if .rssi then
+        if .rssi >= -50 then "[==========] Excellent"
+        elif .rssi >= -60 then "[========--] Good"
+        elif .rssi >= -70 then "[=====-----] Fair"
+        else "[==--------] Poor"
+        end
+    else ""
+    end
+)
+Link Speed:  \(.link_speed_mbps // "N/A") Mbps
+IP Address:  \(.ip // "N/A")
+================================================================"'
+
+                echo ""
+                echo "Press Ctrl+C to stop monitoring"
+                sleep 2
+            done
+            ;;
+        *)
+            echo "ERROR: Unknown option: $action"
+            echo "Use 'wifi help' for usage information"
+            return 1
+            ;;
+    esac
+}
+
+# Quick alias for WiFi scan
+alias wifi-scan='wifi scan'
