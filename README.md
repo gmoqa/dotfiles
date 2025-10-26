@@ -9,6 +9,7 @@ Each directory is a "package" that can be independently installed:
 ```
 dotfiles/
 ├── bash/       # Shell configuration (.bashrc, .bash_aliases)
+├── zsh/        # Zsh + Oh My Zsh + fzf configuration
 ├── ssh/        # SSH client config (NO private keys!)
 └── termux/     # Termux-specific settings
 ```
@@ -25,6 +26,7 @@ stow */
 ```bash
 cd ~/dotfiles
 stow bash      # Creates ~/.bashrc and ~/.bash_aliases
+stow zsh       # Creates ~/.zshrc (requires oh-my-zsh)
 stow ssh       # Creates ~/.ssh/config
 stow termux    # Creates ~/.termux/
 ```
@@ -43,9 +45,10 @@ stow -R bash   # Remove and reinstall bash package
 
 ## 🔄 Setup on new machine
 
+### Basic Setup
 ```bash
 # Clone your dotfiles
-git clone <your-repo-url> ~/dotfiles
+git clone git@github.com:gmoqa/dotfiles.git ~/dotfiles
 
 # Install stow (if needed)
 pkg install stow
@@ -56,6 +59,25 @@ stow bash ssh termux
 
 # Source bash config
 source ~/.bashrc
+```
+
+### Zsh Setup (Optional but Recommended)
+```bash
+# Install zsh and fzf
+pkg install zsh fzf
+
+# Install oh-my-zsh
+git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
+
+# Stow zsh config
+cd ~/dotfiles
+stow zsh
+
+# Change default shell to zsh
+chsh -s zsh
+
+# Restart terminal or run
+zsh
 ```
 
 ## 🔒 Security
