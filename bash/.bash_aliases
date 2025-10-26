@@ -52,45 +52,45 @@ sms() {
             return 0
             ;;
         inbox)
-            echo "📥 Inbox Messages (last $limit):"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "[INBOX] Last $limit messages:"
+            echo "----------------------------------------------------------------"
             termux-sms-list -t inbox -l "$limit" 2>/dev/null | jq -r '.[] |
-                "📱 \(.number // "Unknown") | \(._id)
-👤 \(.name // "No contact name")
-📅 \(.received)
-💬 \(.body)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+                "Number:  \(.number // "Unknown") | ID: \(._id)
+Contact: \(.name // "No contact name")
+Date:    \(.received)
+Message: \(.body)
+----------------------------------------------------------------"'
             ;;
         sent)
-            echo "📤 Sent Messages (last $limit):"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "[SENT] Last $limit messages:"
+            echo "----------------------------------------------------------------"
             termux-sms-list -t sent -l "$limit" 2>/dev/null | jq -r '.[] |
-                "📱 \(.number // "Unknown") | \(._id)
-👤 \(.name // "No contact name")
-📅 \(.received)
-💬 \(.body)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+                "Number:  \(.number // "Unknown") | ID: \(._id)
+Contact: \(.name // "No contact name")
+Date:    \(.received)
+Message: \(.body)
+----------------------------------------------------------------"'
             ;;
         all)
-            echo "📬 All Messages (last $limit):"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "[ALL] Last $limit messages:"
+            echo "----------------------------------------------------------------"
             termux-sms-list -l "$limit" 2>/dev/null | jq -r '.[] |
-                "📱 \(.number // "Unknown") | \(.type) | \(._id)
-👤 \(.name // "No contact name")
-📅 \(.received)
-💬 \(.body)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+                "Number:  \(.number // "Unknown") | Type: \(.type) | ID: \(._id)
+Contact: \(.name // "No contact name")
+Date:    \(.received)
+Message: \(.body)
+----------------------------------------------------------------"'
             ;;
         +*|[0-9]*)
-            echo "💬 Messages with $type:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "[CONVERSATION] Messages with $type:"
+            echo "----------------------------------------------------------------"
             termux-sms-list -n "$type" 2>/dev/null | jq -r '.[] |
-                "\(.type == "inbox" ? "📥" : "📤") \(.received)
-💬 \(.body)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"'
+                "[\(.type == "inbox" ? "RECEIVED" : "SENT")] \(.received)
+Message: \(.body)
+----------------------------------------------------------------"'
             ;;
         *)
-            echo "❌ Unknown option: $type"
+            echo "ERROR: Unknown option: $type"
             echo "Use 'sms help' for usage information"
             return 1
             ;;
