@@ -359,3 +359,207 @@ IP Address:  \(.ip // "N/A")
 
 # Quick alias for WiFi scan
 alias wifi-scan='wifi scan'
+
+# ============================================
+# Termux-API: Location (GPS)
+# ============================================
+
+# Get location information using GPS
+location() {
+    local action="${1:-info}"
+    local provider="${2:-gps}"
+
+    case "$action" in
+        -h|--help|help)
+            echo "Usage: location [info|maps|copy|watch] [provider]"
+            echo ""
+            echo "Commands:"
+            echo "  location          - Get current GPS location (default)"
+            echo "  location info     - Show detailed location information"
+            echo "  location maps     - Open location in Google Maps"
+            echo "  location copy     - Copy coordinates to clipboard"
+            echo "  location watch    - Monitor location in real-time"
+            echo ""
+            echo "Providers:"
+            echo "  gps      - GPS satellites (most accurate, outdoor)"
+            echo "  network  - WiFi/cell towers (faster, works indoor)"
+            echo "  passive  - Last known location (instant)"
+            echo ""
+            echo "Examples:"
+            echo "  location          - Get GPS location"
+            echo "  location info network  - Get location via network"
+            echo "  location maps     - Open in Google Maps"
+            echo "  location copy     - Copy lat,long to clipboard"
+            return 0
+            ;;
+        info)
+            echo "[LOCATION INFO]"
+            echo "Provider: $provider"
+            echo "Getting location... (this may take 10-30 seconds)"
+            echo "================================================================"
+
+            local loc_data=$(termux-location -p "$provider" 2>/dev/null)
+
+            if [ -z "$loc_data" ]; then
+                echo "ERROR: Unable to get location"
+                echo "Make sure:"
+                echo "  - Termux:API app is installed"
+                echo "  - Location permissions are granted"
+                echo "  - GPS is enabled (for GPS provider)"
+                echo "  - You are outdoors or near a window (for GPS)"
+                return 1
+            fi
+
+            echo "$loc_data" | jq -r '
+                if . == null or . == {} then
+                    "ERROR: No location data received"
+                else
+                    "Latitude:       \(.latitude // "N/A")\u00b0
+Longitude:      \(.longitude // "N/A")\u00b0
+Altitude:       \(.altitude // "N/A") meters
+----------------------------------------------------------------
+Accuracy:       \(.accuracy // "N/A") meters  \(
+    if .accuracy then
+        if .accuracy <= 10 then "(Excellent)"
+        elif .accuracy <= 50 then "(Good)"
+        elif .accuracy <= 100 then "(Fair)"
+        else "(Poor)"
+        end
+    else ""
+    end
+)
+Speed:          \(.speed // "N/A") m/s\(
+    if .speed and .speed > 0 then
+        "  (\(.speed * 3.6 | floor) km/h)"
+    else ""
+    end
+)
+Bearing:        \(.bearing // "N/A")\u00b0\(
+    if .bearing then
+        if .bearing >= 337.5 or .bearing < 22.5 then " (N)"
+        elif .bearing >= 22.5 and .bearing < 67.5 then " (NE)"
+        elif .bearing >= 67.5 and .bearing < 112.5 then " (E)"
+        elif .bearing >= 112.5 and .bearing < 157.5 then " (SE)"
+        elif .bearing >= 157.5 and .bearing < 202.5 then " (S)"
+        elif .bearing >= 202.5 and .bearing < 247.5 then " (SW)"
+        elif .bearing >= 247.5 and .bearing < 292.5 then " (W)"
+        else " (NW)"
+        end
+    else ""
+    end
+)
+Provider:       \(.provider // "N/A")
+================================================================
+Google Maps: https://maps.google.com/?q=\(.latitude),\(.longitude)"
+                end'
+            ;;
+        maps)
+            echo "[OPEN IN GOOGLE MAPS]"
+            echo "Getting location..."
+
+            local loc_data=$(termux-location -p "$provider" 2>/dev/null)
+
+            if [ -z "$loc_data" ]; then
+                echo "ERROR: Unable to get location"
+                return 1
+            fi
+
+            local lat=$(echo "$loc_data" | jq -r '.latitude // empty')
+            local lon=$(echo "$loc_data" | jq -r '.longitude // empty')
+
+            if [ -z "$lat" ] || [ -z "$lon" ]; then
+                echo "ERROR: Invalid location data"
+                return 1
+            fi
+
+            local maps_url="https://maps.google.com/?q=${lat},${lon}"
+            echo "Location: ${lat}, ${lon}"
+            echo "Opening: $maps_url"
+            echo ""
+            termux-open-url "$maps_url" 2>/dev/null
+            echo "Map opened in browser!"
+            ;;
+        copy)
+            echo "[COPY COORDINATES]"
+            echo "Getting location..."
+
+            local loc_data=$(termux-location -p "$provider" 2>/dev/null)
+
+            if [ -z "$loc_data" ]; then
+                echo "ERROR: Unable to get location"
+                return 1
+            fi
+
+            local lat=$(echo "$loc_data" | jq -r '.latitude // empty')
+            local lon=$(echo "$loc_data" | jq -r '.longitude // empty')
+
+            if [ -z "$lat" ] || [ -z "$lon" ]; then
+                echo "ERROR: Invalid location data"
+                return 1
+            fi
+
+            echo "${lat},${lon}" | termux-clipboard-set
+            echo "Copied to clipboard: ${lat},${lon}"
+            ;;
+        watch)
+            echo "[LOCATION MONITOR]"
+            echo "Monitoring location... (Press Ctrl+C to stop)"
+            echo "Provider: $provider"
+            echo ""
+
+            while true; do
+                local timestamp=$(date '+%H:%M:%S')
+
+                clear
+                echo "[LOCATION MONITOR] - $timestamp"
+                echo "Provider: $provider"
+                echo "================================================================"
+
+                local loc_data=$(termux-location -p "$provider" -r last 2>/dev/null)
+
+                if [ -n "$loc_data" ]; then
+                    echo "$loc_data" | jq -r '
+                        if . == null or . == {} then
+                            "Waiting for location data..."
+                        else
+                            "Latitude:   \(.latitude // "N/A")\u00b0
+Longitude:  \(.longitude // "N/A")\u00b0
+Accuracy:   \(.accuracy // "N/A") meters  \(
+    if .accuracy then
+        if .accuracy <= 10 then "[==========] Excellent"
+        elif .accuracy <= 50 then "[=======---] Good"
+        elif .accuracy <= 100 then "[====------] Fair"
+        else "[=---------] Poor"
+        end
+    else ""
+    end
+)
+Speed:      \(.speed // 0) m/s\(
+    if .speed and .speed > 0 then
+        "  (\(.speed * 3.6 | floor) km/h)"
+    else "  (Stationary)"
+    end
+)
+Provider:   \(.provider // "N/A")"
+                        end'
+                else
+                    echo "Waiting for location data..."
+                fi
+
+                echo "================================================================"
+                echo ""
+                echo "Press Ctrl+C to stop monitoring"
+                sleep 3
+            done
+            ;;
+        *)
+            echo "ERROR: Unknown option: $action"
+            echo "Use 'location help' for usage information"
+            return 1
+            ;;
+    esac
+}
+
+# Quick aliases
+alias loc='location'
+alias gps='location info gps'
