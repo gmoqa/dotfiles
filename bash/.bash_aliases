@@ -101,3 +101,122 @@ Message: \(.body)
 alias sms-inbox='sms inbox'
 alias sms-sent='sms sent'
 alias sms-all='sms all'
+
+# ============================================
+# Termux-API: Clipboard (macOS-style)
+# ============================================
+
+# Copy to clipboard (like macOS pbcopy)
+alias pbcopy='termux-clipboard-set'
+
+# Paste from clipboard (like macOS pbpaste)
+alias pbpaste='termux-clipboard-get'
+
+# ============================================
+# Termux-API: Share
+# ============================================
+
+# Share text or files with Android share menu
+share() {
+    if [ $# -eq 0 ]; then
+        echo "Usage: share <text|file> [options]"
+        echo ""
+        echo "Examples:"
+        echo "  share 'Hello World'           - Share text"
+        echo "  echo 'test' | share           - Share from stdin"
+        echo "  share file.txt                - Share a file"
+        echo "  share -a send image.png       - Share with specific action"
+        echo "  share --chooser 'Pick app'    - Custom chooser title"
+        echo ""
+        echo "Common actions (-a):"
+        echo "  send      - Default share action"
+        echo "  view      - View the file"
+        echo "  edit      - Edit the file"
+        return 0
+    fi
+
+    # If first arg is a file, share the file
+    if [ -f "$1" ]; then
+        termux-share "$@"
+    else
+        # Otherwise, share as text
+        termux-share -a send "$@"
+    fi
+}
+
+# ============================================
+# Termux-API: Notifications
+# ============================================
+
+# Send notification
+notify() {
+    local title="Notification"
+    local content=""
+    local priority="default"
+
+    # Parse arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -h|--help)
+                echo "Usage: notify [options] <message>"
+                echo ""
+                echo "Options:"
+                echo "  -t, --title <text>     Notification title (default: 'Notification')"
+                echo "  -p, --priority <level> Priority: min, low, default, high, max"
+                echo "  -i, --id <id>          Notification ID (for updating/removing)"
+                echo "  --sound                Enable notification sound"
+                echo "  --vibrate <pattern>    Vibrate pattern (e.g., '200,100,200')"
+                echo ""
+                echo "Examples:"
+                echo "  notify 'Task complete'"
+                echo "  notify -t 'Build' 'Compilation finished'"
+                echo "  notify -p high 'Error occurred'"
+                echo "  notify --sound -t 'Alert' 'Important message'"
+                echo ""
+                echo "Quick aliases:"
+                echo "  notify-success <msg>   - Success notification"
+                echo "  notify-error <msg>     - Error notification"
+                echo "  notify-warn <msg>      - Warning notification"
+                return 0
+                ;;
+            -t|--title)
+                title="$2"
+                shift 2
+                ;;
+            -p|--priority)
+                priority="$2"
+                shift 2
+                ;;
+            -i|--id)
+                local id="$2"
+                shift 2
+                ;;
+            --sound)
+                local sound="--sound"
+                shift
+                ;;
+            --vibrate)
+                local vibrate="--vibrate $2"
+                shift 2
+                ;;
+            *)
+                content="$*"
+                break
+                ;;
+        esac
+    done
+
+    # Send notification
+    if [ -n "$content" ]; then
+        termux-notification --title "$title" --content "$content" --priority "$priority" $sound $vibrate $id
+    else
+        echo "ERROR: No message provided"
+        echo "Use 'notify --help' for usage information"
+        return 1
+    fi
+}
+
+# Quick notification aliases
+alias notify-success='notify -t "Success" --sound'
+alias notify-error='notify -t "Error" -p high --sound'
+alias notify-warn='notify -t "Warning" -p high'
