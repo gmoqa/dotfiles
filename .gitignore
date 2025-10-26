@@ -1,0 +1,68 @@
+# Dotfiles .gitignore - Security-focused
+
+# ===============================================
+# SSH Keys (CRITICAL - Never commit these!)
+# ===============================================
+**/.ssh/id_*
+**/.ssh/*.pem
+**/.ssh/*.key
+**/.ssh/authorized_keys
+!**/.ssh/config
+!**/.ssh/README.md
+
+# ===============================================
+# GPG Keys
+# ===============================================
+**/.gnupg/*.key
+**/.gnupg/private-keys*
+**/.gnupg/secring.gpg
+
+# ===============================================
+# Secrets and Credentials
+# ===============================================
+**/*secret*
+**/*password*
+**/*credential*
+**/*.env
+**/.env.*
+!**/.env.example
+
+# Claude Code (may contain API keys)
+**/.claude.json
+**/.claude/
+
+# NPM tokens
+**/.npmrc
+!**/.npmrc.example
+
+# ===============================================
+# Cache and temporary files
+# ===============================================
+**/.cache/
+**/cache/
+**/*.tmp
+**/*.swp
+**/*.swo
+**/*~
+**/.DS_Store
+
+# ===============================================
+# History files (may contain sensitive commands)
+# ===============================================
+**/.bash_history
+**/.zsh_history
+**/.python_history
+**/.lesshst
+**/.wget-hsts
+
+# ===============================================
+# Stow specific
+# ===============================================
+.stow-*
+.stowrc
+
+# ===============================================
+# Git
+# ===============================================
+*.orig
+*.rej
